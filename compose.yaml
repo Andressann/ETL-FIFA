@@ -1,22 +1,44 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: fifa-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-admin}
+      POSTGRES_DB: ${DB_NAME:-fifa}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-fifa}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   fifa-etl-pipeline:
     build:
       context: .
     image: fifa-etl-pipeline:latest
     container_name: fifa-etl-pipeline
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "80:8080"
     environment:
       APP_MODE: ${APP_MODE:-streamlit}
       PORT: ${PORT:-8080}
-      DB_HOST: ${DB_HOST}
+      DB_HOST: ${DB_HOST:-db}
       DB_PORT: ${DB_PORT:-5432}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
-      DB_ADMIN_DATABASE: ${DB_ADMIN_DATABASE:-postgres}
+      DB_NAME: ${DB_NAME:-fifa}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-admin}
+      DB_ADMIN_DATABASE: ${DB_ADMIN_DATABASE:-fifa}
       DB_AUTO_CREATE: ${DB_AUTO_CREATE:-false}
       DATA_CSV_PATH: ${DATA_CSV_PATH:-/app/data/raw/FullData.csv}
       WITH_PHOTOS: ${WITH_PHOTOS:-false}
       PHOTO_LIMIT: ${PHOTO_LIMIT:-200}
+
+volumes:
+  pgdata:
