@@ -1,6 +1,7 @@
 pandas
 requests
 sqlalchemy
+pg8000
 psycopg2-binary
 python-dotenv
 tqdm

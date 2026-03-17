@@ -1,12 +1,25 @@
+import os
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL
 
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 DB_CONFIG = {
-    "user": "postgres",
-    "password": "admin",
-    "host": "localhost",
-    "port": 5432,
-    "database": "fifa",
+    "user": os.getenv("DB_USER", "postgres"),
+    "password": os.getenv("DB_PASSWORD", "admin"),
+    "host": os.getenv("DB_HOST", "localhost"),
+    "port": int(os.getenv("DB_PORT", "5432")),
+    "database": os.getenv("DB_NAME", "fifa"),
+    "admin_database": os.getenv("DB_ADMIN_DATABASE", "postgres"),
+    "auto_create": _env_bool("DB_AUTO_CREATE", True),
 }
 
 TABLE_NAME = "players"
@@ -31,7 +44,10 @@ def build_engine(database: str, autocommit: bool = False):
 
 
 def ensure_database_exists():
-    admin_engine = build_engine("postgres", autocommit=True)
+    if not DB_CONFIG["auto_create"]:
+        return
+
+    admin_engine = build_engine(DB_CONFIG["admin_database"], autocommit=True)
     try:
         with admin_engine.connect() as conn:
             exists = conn.execute(
